@@ -12,12 +12,10 @@ export default defineConfig(() => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // Removendo aliases explícitos para 'react' e 'react-dom'
-      // "react": path.resolve(__dirname, "node_modules/react"),
-      // "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
     },
   },
   optimizeDeps: {
-    exclude: ['react-chessboard'], // Mantendo react-chessboard na lista de exclusão
+    // Removendo 'react-chessboard' da lista de exclusão para permitir que o Vite o otimize
+    exclude: [], 
   },
 }));
