@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Chess } from 'chess.js';
 import ChessBoardComponent from '@/components/ChessBoardComponent';
 import AICoachPanel from '@/components/AICoachPanel';
@@ -16,6 +16,46 @@ const ChessGame: React.FC = () => {
   const [suggestedMove, setSuggestedMove] = useState<string | null>(null);
   const [explanation, setExplanation] = useState<string | null>(null);
 
+  const stockfishWorkerRef = useRef<Worker | null>(null);
+
+  useEffect(() => {
+    // Inicializa o Web Worker do Stockfish
+    stockfishWorkerRef.current = new Worker(new URL('../workers/stockfishWorker.ts', import.meta.url));
+
+    stockfishWorkerRef.current.onmessage = (event: MessageEvent) => {
+      const data = event.data;
+      console.log('Stockfish output:', data);
+
+      // Exemplo de como parsear a saída do Stockfish para o melhor movimento
+      if (typeof data === 'string' && data.startsWith('bestmove')) {
+        const parts = data.split(' ');
+        if (parts.length >= 2) {
+          const move = parts[1];
+          setSuggestedMove(move);
+          setExplanation(
+            "A IA sugeriu este movimento. Em uma implementação completa, a explicação seria mais detalhada, baseada na análise do motor."
+          );
+          showSuccess("Análise da IA concluída!");
+        }
+      } else if (typeof data === 'string' && data.includes('info depth')) {
+        // Você pode usar isso para mostrar o progresso da análise
+        // console.log('Stockfish analysis progress:', data);
+      }
+      setIsLoadingAI(false);
+    };
+
+    stockfishWorkerRef.current.onerror = (error) => {
+      console.error("Stockfish Worker error:", error);
+      showError("Erro na análise da IA.");
+      setIsLoadingAI(false);
+    };
+
+    // Limpa o worker quando o componente é desmontado
+    return () => {
+      stockfishWorkerRef.current?.terminate();
+    };
+  }, []);
+
   const handleMove = useCallback((newFen: string) => {
     setGame(new Chess(newFen));
     setSuggestedMove(null); // Reset AI suggestion on new move
@@ -28,31 +68,14 @@ const ChessGame: React.FC = () => {
     setSuggestedMove(null);
     setExplanation(null);
 
-    // --- Placeholder for AI Integration ---
-    // In a real application, you would send the current FEN (game.fen())
-    // to a backend service running a chess engine (like Stockfish)
-    // and potentially an LLM for generating explanations.
-    // For this example, we'll simulate a delay and provide a dummy suggestion.
-    await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call delay
-
-    // Dummy AI logic:
-    const possibleMoves = game.moves({ verbose: true });
-    if (possibleMoves.length > 0) {
-      // For simplicity, let's just pick a random move as a "suggestion"
-      const randomMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-      setSuggestedMove(`${randomMove.from}${randomMove.to}`);
-      setExplanation(
-        "Esta é uma explicação simulada. Em uma implementação real, a IA detalharia por que este é o melhor movimento, considerando táticas, estratégia e planos futuros."
-      );
-      showSuccess("Análise da IA concluída!");
+    if (stockfishWorkerRef.current) {
+      stockfishWorkerRef.current.postMessage('ucinewgame');
+      stockfishWorkerRef.current.postMessage(`position fen ${game.fen()}`);
+      stockfishWorkerRef.current.postMessage('go depth 15'); // Analisar até a profundidade 15
     } else {
-      setSuggestedMove("Nenhum movimento disponível.");
-      setExplanation("A partida pode ter terminado ou não há movimentos legais.");
-      showError("Não foi possível encontrar um movimento sugerido.");
+      showError("Stockfish worker não está pronto.");
+      setIsLoadingAI(false);
     }
-    // --- End Placeholder ---
-
-    setIsLoadingAI(false);
   };
 
   const resetGame = () => {
