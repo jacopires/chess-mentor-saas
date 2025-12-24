@@ -12,12 +12,9 @@ export default defineConfig(() => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // Removendo aliases explícitos para 'react' e 'react-dom'
-      // "react": path.resolve(__dirname, "node_modules/react"),
-      // "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
     },
   },
   optimizeDeps: {
-    exclude: ['react', 'react-dom', 'react-chessboard'], // Excluir react, react-dom e react-chessboard da otimização de dependências
+    exclude: ['react-chessboard'], // Mantendo apenas react-chessboard na lista de exclusão
   },
 }));
