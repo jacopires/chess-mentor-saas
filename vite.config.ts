@@ -18,6 +18,6 @@ export default defineConfig(() => ({
     },
   },
   optimizeDeps: {
-    exclude: ['react-chessboard'], // Mantendo a exclusão de react-chessboard da otimização de dependências
+    exclude: ['react', 'react-dom', 'react-chessboard'], // Excluir react, react-dom e react-chessboard da otimização de dependências
   },
 }));
